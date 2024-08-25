@@ -104,5 +104,25 @@ module.exports = {
         } catch (e) {
             console.error('addSuccessCount fail', e);
         }
-    }
+    },
+    setPlaying(discordId) {
+        const dbPath = path.join(__dirname, 'data/users.json');
+        try {
+            let res = JSON.parse(fs.readFileSync(dbPath));
+            res[discordId].is_playing = true;
+            fs.writeFileSync(dbPath, JSON.stringify(res, null, 2));
+        } catch (e) {
+            console.error('addSuccessCount fail', e);
+        }
+    },
+    endPlaying(discordId) {
+        const dbPath = path.join(__dirname, 'data/users.json');
+        try {
+            let res = JSON.parse(fs.readFileSync(dbPath));
+            res[discordId].is_playing = false;
+            fs.writeFileSync(dbPath, JSON.stringify(res, null, 2));
+        } catch (e) {
+            console.error('addSuccessCount fail', e);
+        }
+    },
 }

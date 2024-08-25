@@ -1,6 +1,5 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
-const bs = require('../../db/battlestate.js');
-const { getUser, addChallengeCount, addSuccessCount } = require('../../db/users.js');
+const { getUser, addChallengeCount, addSuccessCount, setPlaying, endPlaying } = require('../../db/users.js');
 const wait = require('node:timers/promises').setTimeout;
 const solvedacQueryHelper = require('../../api/solvedac.js');
 
@@ -17,9 +16,9 @@ const giveup = new ButtonBuilder()
 	.setCustomId('giveup')
 	.setLabel('포기')
 	.setStyle(ButtonStyle.Danger);
+	// .addComponents(success)
+	// .addComponents(dummy)
 const row = new ActionRowBuilder()
-	.addComponents(success)
-	.addComponents(dummy)
 	.addComponents(giveup);
 
 const PROBLEM_NUM = 3;
@@ -33,6 +32,7 @@ module.exports = {
         .setDescription('solved.ac 기준 난이도를 선택하세요.')
         .setRequired(true)
         .addChoices(
+          {name: '브론즈 전체', value: 'bo'},
           {name: '실버 하위', value: 'sl'},
           {name: '실버 상위', value: 'sh'},
           {name: '실버 전체', value: 'so'},
@@ -54,6 +54,12 @@ module.exports = {
                 content: 'solved.ac 계정이 연동되어 있지 않습니다. /연동 명령어로 연동 후 사용해주세요.'
             });
             return;
+        }
+        if (userData.is_playing) {
+          await interaction.editReply({ 
+              content: '이미 진행중인 랜디가 있습니다! 새로 문제를 받으시려면 포기한 이후에 다시 받아주세요.'
+          });
+          return;
         }
 
         const result = await solvedacQueryHelper.getRandomProblems([userData.handle], difficulty);
@@ -103,16 +109,22 @@ module.exports = {
             tagStringResult += '**[난이도: 중간맛]**';
           }
           let padding = '';
-          let paddingLen = Math.floor(Math.random() * 50);
-          for(let i = 0; i < paddingLen; ++i) padding += ' '
+          let paddingLen = Math.floor(Math.random() * 3);
+          if (paddingLen == 1) {
+            padding = '    '; 
+          } else if (paddingLen == 2) {
+            padding = '                 ';
+          }
           tagStringResult += `  ||${item.battleTagDescription}${padding}||\n`;
           ++idx;
         }
       
-          const message = await interaction.followUp({
-              content: `10초 이내에 밴할 문제 번호를 이모지로 반응해주세요. 선택하지 않으면 ${PROBLEM_NUM}문제중 랜덤이 됩니다.\n\n` + tagStringResult,
-              fetchReply: true
-          });
+        setPlaying(interaction.user.id); // 시작!
+
+        const message = await interaction.followUp({
+            content: `10초 이내에 밴할 문제 번호를 이모지로 반응해주세요. 선택하지 않으면 ${PROBLEM_NUM}문제중 랜덤이 됩니다.\n\n` + tagStringResult,
+            fetchReply: true
+        });
         await message.react('1️⃣');
         await message.react('2️⃣');
         await message.react('3️⃣');
@@ -222,18 +234,25 @@ module.exports = {
                 const startTime = Math.floor(Date.now() / 1000);
                 (async() => {
                     const timeMessage = await interaction.followUp({
-                        content: '남은 시간: 30분\n(약 1분 주기로 자동 업데이트 됩니다.)'
+                        content: '남은 시간: 30분\n(약 1분 주기로 풀이 여부가 확인 됩니다.)'
                     });
                     const endTime = Math.floor(Date.now() / 1000) + 30 * 60;
-                    const myFunc = function() {
+                    const myFunc = async function() {
                         if (userEndFlag) {
                             timeMessage.edit('풀이가 종료되었습니다.');
                             return;
                         }
                         remainTime = endTime - Math.floor(Date.now() / 1000);
-                        timeMessage.edit(`남은 시간: ${Math.floor(remainTime / 60)}분 ${remainTime % 60}초\n(약 1분 주기로 자동 업데이트 됩니다.)`);
+                        timeMessage.edit(`남은 시간: ${Math.floor(remainTime / 60)}분 ${remainTime % 60}초\n(약 1분 주기로 풀이 여부가 확인 됩니다.)`);
 
-                        if (remainTime > 0) {
+                        const ret = await solvedacQueryHelper.checkUserSolvedReal(userData.handle, problemDB[0].problemId);
+                        if (ret == true) {
+                            userEndFlag = true;
+                            endPlaying(interaction.user.id);
+                            const successTime = Math.floor(Date.now() / 1000) - startTime;
+                            addSuccessCount(interaction.user.id, difficultyKind);
+                            timeMessage.edit(`${Math.floor(successTime / 60)}분 ${successTime % 60}초 만에 문제풀이에 성공하셨습니다. 축하드립니다!\n프로필에 기록되었습니다.`);
+                        } else if (remainTime > 0) {
                             setTimeout(myFunc, 60000);
                         } else {
                             timeEndFlag = true;
@@ -248,12 +267,13 @@ module.exports = {
 
                 try {
                     const confirmation = await response.awaitMessageComponent({ filter: collectorFilter, time: 60_000 * 30 });
-                    if (timeEndFlag) {
-                        await confirmation.update({ content: originalMessage + `\n\n이미 시간초과 되었습니다.`, components: [] });
+                    if (timeEndFlag || userEndFlag) {
+                        await confirmation.update({ content: originalMessage + `\n\n이미 풀이가 종료되었습니다.`, components: [] });
                         return;
                     }
                     if (confirmation.customId === 'success') {
                         userEndFlag = true;
+                        endPlaying(interaction.user.id);
                         await confirmation.update({ content: originalMessage + `\n\n정말로 풀었는지 확인을 진행 중입니다...`, components: [] });
 
                         for(let i = 0; i < 5; ++i) {
@@ -269,15 +289,16 @@ module.exports = {
                         await confirmation.followUp({ content: `아무리 기다려도.. 문제 풀이가 확인되지 않습니다. 아쉽지만 성공기록은 추가되지 않습니다.\n@${userData.handle}님, 거짓말은 아니겠죠..?`, components: [] });
                     } else if (confirmation.customId === 'giveup') {
                         userEndFlag = true;
+                        endPlaying(interaction.user.id);
                         await confirmation.update({ content: originalMessage, components: [] });
                         await confirmation.followUp({ content: `중도포기를 선택하셨습니다. 다음에는 좋은 문제를 만나실 거에요!`, components: [] });
                     }
                 } catch (e) {
                     userEndFlag = true;
+                    endPlaying(interaction.user.id);
                     // await interaction.followUp({ content: originalMessage + `\n\n제한시간이 초과되어 실패하셨습니다.`, components: [] });
                 }
             })();
-
         });
     }
 };

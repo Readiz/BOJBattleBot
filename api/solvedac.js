@@ -98,5 +98,23 @@ module.exports = {
             console.error('Request Error!', e);
             return false;
         }
-    }
+    },
+    async getRandomProblemsWithQuery(query) {
+        try {
+            let solved_filter = `lang:ko solvable:true solved:100.. ${query}`;
+            console.log(solved_filter);
+            let paramsObj = { 
+                query: `${solved_filter}`,
+                sort: 'random'
+            };
+            let searchParams = new URLSearchParams(paramsObj);
+            console.log('url', `https://solved.ac/api/v3/search/problem?${searchParams.toString()}`);
+            const queryResult = await fetch(`https://solved.ac/api/v3/search/problem?${searchParams.toString()}`);
+            const { count, items } = await queryResult.json();
+            return items;
+        } catch (e) {
+            console.error('Request Error!', e);
+            return null;
+        }
+    },
 }

@@ -18,9 +18,10 @@
   },
   "homepage": "https://github.com/Readiz/BOJBattleBot#readme",
   "dependencies": {
-    "@napi-rs/canvas": "^0.1.49",
     "discord.js": "^14.14.1",
-    "node-html-to-image": "^4.0.0",
+    "header-generator": "^2.1.54",
+    "node-html-parser": "^6.1.13",
+    "turndown": "^7.2.0",
     "undici": "^6.6.2"
   },
   "devDependencies": {
