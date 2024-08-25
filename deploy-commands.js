@@ -39,10 +39,10 @@ const rest = new REST().setToken(token);
             Routes.applicationCommands(clientId),
 			{ body: commands },
 		);
-        const data2 = await rest.put(
-			Routes.applicationGuildCommands(clientId, guildId), // 나중에 배포시에는 guildId 빼면 됨
-            { body: [] },
-		);
+        // const data2 = await rest.put(
+		// 	Routes.applicationGuildCommands(clientId, guildId), // 나중에 배포시에는 guildId 빼면 됨
+        //     { body: [] },
+		// );
 
 
 		console.log(`Successfully reloaded ${data.length} application (/) commands.`);

@@ -1,5 +1,3 @@
-const { request } = require('undici');
-
 /*
 
 for (const [key, value] of mySearchParams) {
@@ -64,8 +62,9 @@ module.exports = {
             };
             let searchParams = new URLSearchParams(paramsObj);
             // query=tier:g5...g1&sort=random
-            const queryResult = await request(`https://solved.ac/api/v3/search/problem?${searchParams.toString()}`);
-            const { count, items } = await queryResult.body.json();
+            console.log('url', `https://solved.ac/api/v3/search/problem?${searchParams.toString()}`);
+            const queryResult = await fetch(`https://solved.ac/api/v3/search/problem?${searchParams.toString()}`);
+            const { count, items } = await queryResult.json();
             // console.log(items.map(_ => _.problemId));
             // if (items.length < 5) return null;
             return items;
@@ -78,8 +77,8 @@ module.exports = {
         let paramsObj = { query: `solved_by:${user_id}` };
         let searchParams = new URLSearchParams(paramsObj);
         try {
-            const queryResult = await request(`https://solved.ac/api/v3/search/problem?${searchParams.toString()}`);
-            const { count, items } = await queryResult.body.json();
+            const queryResult = await fetch(`https://solved.ac/api/v3/search/problem?${searchParams.toString()}`);
+            const { count, items } = await queryResult.json();
             return count > 0;
         } catch (e) {
             console.error('Request Error!', e);
@@ -91,8 +90,8 @@ module.exports = {
         console.log(paramsObj.query);
         let searchParams = new URLSearchParams(paramsObj);
         try {
-            const queryResult = await request(`https://solved.ac/api/v3/search/problem?${searchParams.toString()}`);
-            const { count, items } = await queryResult.body.json();
+            const queryResult = await fetch(`https://solved.ac/api/v3/search/problem?${searchParams.toString()}`);
+            const { count, items } = await queryResult.json();
             console.log({count, items});
             return count > 0;
         } catch (e) {

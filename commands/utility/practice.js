@@ -1,6 +1,6 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const bs = require('../../db/battlestate.js');
-const { getUser, addRunCount, addSolved } = require('../../db/users.js');
+const { getUser, addChallengeCount, addSuccessCount } = require('../../db/users.js');
 const wait = require('node:timers/promises').setTimeout;
 const solvedacQueryHelper = require('../../api/solvedac.js');
 
@@ -22,10 +22,12 @@ const row = new ActionRowBuilder()
 	.addComponents(dummy)
 	.addComponents(giveup);
 
+const PROBLEM_NUM = 3;
+
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('연습')
-		.setDescription('PS 배틀그라운드에 참가하기 위해 연습합니다.')
+		.setName('랜덤')
+		.setDescription('랜덤 문제를 뽑습니다.')
     .addStringOption(option => 
       option.setName('difficulty')
         .setDescription('solved.ac 기준 난이도를 선택하세요.')
@@ -45,6 +47,7 @@ module.exports = {
 
         await interaction.deferReply('연습문제를 준비하는 중...');
         const difficulty = interaction.options.getString('difficulty');
+        const difficultyKind = difficulty[0];
         const userData = getUser(interaction.user.id);
         if (!userData) {
             await interaction.editReply({ 
@@ -74,10 +77,10 @@ module.exports = {
             problemDB.push(item);
             console.log(item.problemId);
           }
-          if (idx > 5) break;
+          if (idx > PROBLEM_NUM) break;
         }
       
-        if (problemDB.length < 5) {
+        if (problemDB.length < PROBLEM_NUM) {
           await interaction.followUp({
             content: `선택한 난이도의 문제 뽑기에 실패했습니다. 연습을 종료합니다.`
           });
@@ -99,22 +102,25 @@ module.exports = {
           } else {
             tagStringResult += '**[난이도: 중간맛]**';
           }
-          tagStringResult += `  ${item.battleTagDescription}\n`;
+          let padding = '';
+          let paddingLen = Math.floor(Math.random() * 50);
+          for(let i = 0; i < paddingLen; ++i) padding += ' '
+          tagStringResult += `  ||${item.battleTagDescription}${padding}||\n`;
           ++idx;
         }
       
           const message = await interaction.followUp({
-              content: '10초 이내에 밴할 문제 번호를 이모지로 반응해주세요. 선택하지 않으면 5문제중 랜덤이 됩니다.\n\n' + tagStringResult,
+              content: `10초 이내에 밴할 문제 번호를 이모지로 반응해주세요. 선택하지 않으면 ${PROBLEM_NUM}문제중 랜덤이 됩니다.\n\n` + tagStringResult,
               fetchReply: true
           });
         await message.react('1️⃣');
         await message.react('2️⃣');
         await message.react('3️⃣');
-        await message.react('4️⃣');
-        await message.react('5️⃣');
+        // await message.react('4️⃣');
+        // await message.react('5️⃣');
       
         const collectorFilter = (reaction, user) => {
-          return ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'].includes(reaction.emoji.name);// && user.id === interaction.user.id;
+          return ['1️⃣', '2️⃣', '3️⃣'].includes(reaction.emoji.name);// && user.id === interaction.user.id;
         };
 
         const userids = [interaction.user.id];
@@ -208,6 +214,7 @@ module.exports = {
                     content: originalMessage,
                     components: [row]
                 });
+                addChallengeCount(interaction.user.id, difficultyKind);
 
                 let userEndFlag = false;
                 let timeEndFlag = false;
@@ -254,7 +261,8 @@ module.exports = {
                             const ret = await solvedacQueryHelper.checkUserSolvedReal(userData.handle, problemDB[0].problemId);
                             if (ret == true) {
                                 const successTime = Math.floor(Date.now() / 1000) - startTime;
-                                await confirmation.followUp({ content: `${Math.floor(successTime / 60)}분 ${successTime % 60}초 만에 문제풀이에 성공하셨습니다. 축하드립니다!\n프로필에 보상이 추가되었습니다.`, components: [] });
+                                addSuccessCount(interaction.user.id, difficultyKind);
+                                await confirmation.followUp({ content: `${Math.floor(successTime / 60)}분 ${successTime % 60}초 만에 문제풀이에 성공하셨습니다. 축하드립니다!\n프로필에 기록되었습니다.`, components: [] });
                                 return;
                             }
                         }
@@ -262,7 +270,7 @@ module.exports = {
                     } else if (confirmation.customId === 'giveup') {
                         userEndFlag = true;
                         await confirmation.update({ content: originalMessage, components: [] });
-                        await confirmation.followUp({ content: `중도포기를 선택하셨습니다. 다음에는 좋은 문제를 만나실 거에요!\n(프로필에 :run: 카운트가 추가됩니다.)`, components: [] });
+                        await confirmation.followUp({ content: `중도포기를 선택하셨습니다. 다음에는 좋은 문제를 만나실 거에요!`, components: [] });
                     }
                 } catch (e) {
                     userEndFlag = true;

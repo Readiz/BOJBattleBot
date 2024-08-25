@@ -15,6 +15,23 @@ module.exports = {
             return null;
         }
     },
+    getUserByHandle(solvedId) {
+        const dbPath = path.join(__dirname, 'data/users.json');
+        try {
+            const db = JSON.parse(fs.readFileSync(dbPath));
+            const keys = Object.keys(db);
+    
+            for (let key of keys) {
+                if (db[key].handle === solvedId) {
+                    return db[key];
+                }
+            }
+            return null;
+        } catch (e) {
+            console.error('Parse error', e);
+            return null;
+        }
+    },
     checkDuplicate(solvedId) {
         const dbPath = path.join(__dirname, 'data/users.json');
         try {
@@ -33,8 +50,28 @@ module.exports = {
         const userObj = {
             handle: solvedId,
             rating: 1000,
-            solved: [],
-            run: 0
+            "solved": {
+                "b": {
+                    "challenge": 0,
+                    "success": 0
+                },
+                "s": {
+                    "challenge": 0,
+                    "success": 0
+                },
+                "g": {
+                    "challenge": 0,
+                    "success": 0
+                },
+                "p": {
+                    "challenge": 0,
+                    "success": 0
+                },
+                "d": {
+                    "challenge": 0,
+                    "success": 0
+                }
+            }
         };
         try {
             res = JSON.parse(fs.readFileSync(dbPath));
@@ -48,30 +85,24 @@ module.exports = {
         res[discordId] = userObj;
         fs.writeFileSync(dbPath, JSON.stringify(res, null, 2));
     },
-    addRunCount(discordId) {
+    addChallengeCount(discordId, difficulty) {
         const dbPath = path.join(__dirname, 'data/users.json');
         try {
             let res = JSON.parse(fs.readFileSync(dbPath));
-            if (!res[discordId].run) {
-                res[discordId].run = 0;
-            }
-            res[discordId].run += 1;
+            res[discordId].solved[difficulty].challenge += 1;
             fs.writeFileSync(dbPath, JSON.stringify(res, null, 2));
         } catch (e) {
-            console.error('add run cnt fail', e);
+            console.error('addChallengeCount fail', e);
         }
     },
-    addSolved(discordId, tier) {
+    addSuccessCount(discordId, difficulty) {
         const dbPath = path.join(__dirname, 'data/users.json');
         try {
             let res = JSON.parse(fs.readFileSync(dbPath));
-            if (!Array.isArray(res[discordId].solved)) {
-                res[discordId].solved = [];
-            }
-            res[discordId].solved.push(tier);
+            res[discordId].solved[difficulty].success += 1;
             fs.writeFileSync(dbPath, JSON.stringify(res, null, 2));
         } catch (e) {
-            console.error('add solved fail', e);
+            console.error('addSuccessCount fail', e);
         }
     }
 }
