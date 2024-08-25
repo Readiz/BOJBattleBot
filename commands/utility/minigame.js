@@ -7,7 +7,7 @@ const bojQueryHelper = require('../../api/boj.js');
 const convertToNL = {
   greedy: '그리디',
   dp: 'DP',
-  dp_Greedy: 'DP + 그리디',
+  dp_greedy: 'DP + 그리디',
   none: '둘 다 아님'
 };
 
