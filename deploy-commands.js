@@ -1,5 +1,5 @@
 const { REST, Routes } = require('discord.js');
-const { clientId, guildId, token } = require('./config.json');
+const { clientId, personal_guild, token } = require('./config.json');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -25,6 +25,28 @@ for (const folder of commandFolders) {
 }
 console.log(commands);
 
+const personal_commands = [];
+// Grab all the command folders from the commands directory you created earlier
+const personal_foldersPath = path.join(__dirname, 'commands_personal');
+const personal_commandFolders = fs.readdirSync(foldersPath);
+
+for (const folder of personal_commandFolders) {
+	// Grab all the command files from the commands directory you created earlier
+	const commandsPath = path.join(personal_foldersPath, folder);
+	const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+	// Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
+	for (const file of commandFiles) {
+		const filePath = path.join(commandsPath, file);
+		const command = require(filePath);
+		if ('data' in command && 'execute' in command) {
+			personal_commands.push(command.data.toJSON());
+		} else {
+			console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+		}
+	}
+}
+console.log(personal_commands);
+
 // Construct and prepare an instance of the REST module
 const rest = new REST().setToken(token);
 
@@ -35,18 +57,17 @@ const rest = new REST().setToken(token);
 
 		// The put method is used to fully refresh all commands in the guild with the current set
 		const data = await rest.put(
-			// Routes.applicationGuildCommands(clientId, guildId), // 나중에 배포시에는 guildId 빼면 됨
             Routes.applicationCommands(clientId),
 			{ body: commands },
 		);
-        // const data2 = await rest.put(
-		// 	Routes.applicationGuildCommands(clientId, guildId), // 나중에 배포시에는 guildId 빼면 됨
-        //     { body: [] },
-		// );
+        const data_personal = await rest.put(
+			Routes.applicationGuildCommands(clientId, personal_guild), // 나중에 배포시에는 guildId 빼면 됨
+            { body: personal_commands },
+		);
 
 
 		console.log(`Successfully reloaded ${data.length} application (/) commands.`);
-		//console.log(`Successfully reloaded ${data2.length} application (/) commands. [2]`);
+		console.log(`Successfully reloaded ${data_personal.length} application (/) commands.`);
 	} catch (error) {
 		// And of course, make sure you catch and log any errors!
 		console.error(error);
