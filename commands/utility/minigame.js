@@ -145,7 +145,7 @@ module.exports = {
       });
       await delay(1000 * 60 * 3);
 
-      const resultString = `**정답: ${convertToNL[ans_case]}**\n\n실제 백준 문제 번호: ${problemId}\nhttps://boj.ma/${problemId}/t\n정답자: ${[...new Set(ansList)].join(', ')}\n오답자: ${[...new Set(notAnsList)].join(', ')}\n`
+      const resultString = `**정답: ${convertToNL[ans_case]}**\n\n실제 백준 문제 번호: ${problemId}\nhttps://boj.ma/${problemId}/t\n\n정자: ${[...new Set(ansList)].join(', ')}\n오답: ${[...new Set(notAnsList)].join(', ')}\n`
       await interaction.followUp({
         content: resultString
       });
