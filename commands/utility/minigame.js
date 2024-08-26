@@ -99,25 +99,50 @@ module.exports = {
         let ansList = [];
         let notAnsList = [];
         let answeredList = [];
-        (async() => {
-          const userName = interaction.user.username;
-          try {
-              const confirmation = await response.awaitMessageComponent({ time: 60_000 * 3 });
-              if (answeredList.includes(userName)) {
-                await confirmation.reply({ content: '이미 응답하셨습니다.', ephemeral: true });  
-                return;
-              }
-              if (confirmation.customId === ans_case) {
-                ansList.push(userName);
-              } else {
-                notAnsList.push(userName);
-              }
-              await confirmation.reply({ content: '응답 되었습니다! 잠시 뒤 정답이 공개됩니다.', ephemeral: true });
-          } catch (e) {
-            console.error(e);
+      //   (async() => {
+      //     const userName = interaction.user.username;
+      //     try {
+      //         const confirmation = await response.awaitMessageComponent({ time: 60_000 * 3 });
+      //         if (answeredList.includes(userName)) {
+      //           await confirmation.reply({ content: '이미 응답하셨습니다.', ephemeral: true });  
+      //           return;
+      //         }
+      //         if (confirmation.customId === ans_case) {
+      //           ansList.push(userName);
+      //         } else {
+      //           notAnsList.push(userName);
+      //         }
+      //         await confirmation.reply({ content: '응답 되었습니다! 잠시 뒤 정답이 공개됩니다.', ephemeral: true });
+      //     } catch (e) {
+      //       console.error(e);
+      //     }
+      //     answeredList.push(userName);
+      // })();
+      // 이벤트 리스너를 통해 여러 사용자의 응답 처리
+      const collector = response.createMessageComponentCollector({ time: 60_000 * 3 });
+
+      collector.on('collect', async (confirmation) => {
+          const userName = confirmation.user.username;
+
+          if (answeredList.includes(userName)) {
+              await confirmation.reply({ content: '이미 응답하셨습니다.', ephemeral: true });
+              return;
           }
+
+          if (confirmation.customId === ans_case) {
+              ansList.push(userName);
+          } else {
+              notAnsList.push(userName);
+          }
+
           answeredList.push(userName);
-      })();
+          await confirmation.reply({ content: '응답 되었습니다! 잠시 뒤 정답이 공개됩니다.', ephemeral: true });
+      });
+
+      collector.on('end', (collected) => {
+          console.log('응답 수집 종료:', collected.size);
+          // 여기에 응답 수집 종료 후 처리 로직을 추가하세요.
+      });
       await delay(1000 * 60 * 3);
 
       const resultString = `**정답: ${convertToNL[ans_case]}**\n\n실제 백준 문제 번호: ${problemId}\nhttps://boj.ma/${problemId}/t\n정답자: ${[...new Set(ansList)].join(', ')}\n오답자: ${[...new Set(notAnsList)].join(', ')}\n`
