@@ -1,5 +1,5 @@
 const { AttachmentBuilder, SlashCommandBuilder } = require('discord.js');
-const gptQueryHelper = require('./gpt.js');
+const gptQueryHelper = require('../../api/gpt.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
