@@ -3,6 +3,7 @@ const { getUser, addChallengeCount, addSuccessCount, setPlaying, endPlaying } = 
 const wait = require('node:timers/promises').setTimeout;
 const solvedacQueryHelper = require('../../api/solvedac.js');
 const bojQueryHelper = require('../../api/boj.js');
+const gptQueryHelper = require('../../api/gpt.js');
 
 const convertToNL = {
   greedy: '그리디',
@@ -90,8 +91,10 @@ module.exports = {
         const simpleDesc = desc[1].trim().replace(/\n\n/g, '\n');
         console.log(simpleDesc);
 
-        const originalMessage = `**미니게임이 시작되었습니다.**\n정답은 3분 뒤에 공개합니다. 아래 설명을 보고 적절한 태그를 고르세요. \n\n**문제 설명**\n` +
-        `${simpleDesc}`;
+        const refinedSimpleDesc = await gptQueryHelper.completions(simpleDesc, 'You are a helpful assistant. 너는 주어지는 문제 설명을 최대한 가독성 있게 바꿔주는 역할을 할거야. 응답은 **문제설명**으로 시작하도록 해. 주어진 입력에 없는 추가적인 설명이나 힌트, 해결법을 덧붙이지마. Mathjax는 사용할 수 없는 환경이야. 수식을 최대한 간단하게 표현하고 markdown 문법과 충돌되지 않게 해. 용어가 헷갈리는게 있으면 Computer Science 기준으로 답변해줘. 혹시 중간에 이미지 링크같은게 있으면, 마지막에 몰아서 링크만 심플하게 리스트로 제공해. 없으면 추가하지마.');
+
+        const originalMessage = `**미니게임이 시작되었습니다.**\n정답은 3분 뒤에 공개합니다. 아래 설명을 보고 적절한 태그를 고르세요. \n\n` +
+        `${refinedSimpleDesc}`;
         const response = await interaction.followUp({
             content: originalMessage,
             components: [row]
