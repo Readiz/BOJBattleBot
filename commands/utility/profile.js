@@ -56,7 +56,7 @@ module.exports = {
 				detailedStatus += `${condi[1]} - 도전: ${userState.solved[condi[0]].challenge} / 성공: ${userState.solved[condi[0]].success}\n`;
 			}
 			const randomIndex = Math.floor(Math.random() * motivationalMessages.length);
-            await interaction.editReply(`***${userState.handle}님의 전적***\n레이팅: ${userState.rating}\n${detailedStatus}\n\n***${motivationalMessages[randomIndex].replace('USER', userState.handle)}***`);
+            await interaction.editReply(`***${userState.handle}님의 전적***\n레이팅: ${userState.rating}\n미니게임 전적 - 0승 0패 (0%)\n\n${detailedStatus}\n\n***${motivationalMessages[randomIndex].replace('USER', userState.handle)}***`);
         } else {
 			await interaction.editReply({ 
                 content: '연동되지 않은 solved.ac 계정입니다.'
