@@ -220,7 +220,7 @@ module.exports = {
             // bs.problemSelected(interaction.channelId, problemDB[0].problemId);
 
             (async() => {
-                const originalMessage = `**@${userData.handle} 님의 연습이 시작되었습니다.**\n제한시간은 30분입니다. 문제 풀이를 성공 / 포기하셨으면 아래 버튼을 사용해주세요. \n\n**선정된 문제**\n` +
+                const originalMessage = `**@${userData.handle} 님의 연습이 시작되었습니다.**\n제한시간은 30분입니다. 문제 풀이를 풀지 않고 포기하시려면 아래 버튼을 사용해주세요. \n\n**선정된 문제**\n` +
                 `https://boj.ma/${problemDB[0].problemId}/t`;
                 const response = await interaction.followUp({
                     content: originalMessage,
