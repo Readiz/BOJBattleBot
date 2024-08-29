@@ -51,12 +51,17 @@ module.exports = {
 		let userState = interaction.options.getString('id')? getUserByHandle(interaction.options.getString('id')) : getUser(interaction.user.id);
         if (userState && userState.solved) {
 			let detailedStatus = '';
-			const fetchCondition = [['b', '브론즈'], ['s', '실버'], ['g', '골드'], ['p', '플레티넘'], ['d', '다이아몬드']];
+			const fetchCondition = [['b', '브론즈'], ['s', '실버'], ['g', '골드'], ['p', '플레티넘'], ['d', '다이아몬드'], ['r', '루비'], ['u', 'Unrated']];
 			for(const condi of fetchCondition) {
+                if (!userState.solved[condi[0]] || userState.solved[condi[0]].challenge == 0) continue;
 				detailedStatus += `${condi[1]} - 도전: ${userState.solved[condi[0]].challenge} / 성공: ${userState.solved[condi[0]].success}\n`;
 			}
 			const randomIndex = Math.floor(Math.random() * motivationalMessages.length);
-            await interaction.editReply(`***${userState.handle}님의 전적***\n레이팅: ${userState.rating}\n미니게임 전적 - 0승 0패 (0%)\n\n${detailedStatus}\n\n***${motivationalMessages[randomIndex].replace('USER', userState.handle)}***`);
+            let percent = 0;
+            let winCnt = userState.minigame && userState.minigame.win;
+            let loseCnt = userState.minigame && userState.minigame.lose;
+            if (winCnt + loseCnt != 0) percent = Number((winCnt / (winCnt + loseCnt))*100).toFixed(2);
+            await interaction.editReply(`***${userState.handle}님의 전적***\n레이팅: ${userState.rating}\n미니게임 전적 - ${winCnt}승 ${loseCnt}패 (${percent}%)\n\n${detailedStatus}\n***${motivationalMessages[randomIndex].replace('USER', userState.handle)}***`);
         } else {
 			await interaction.editReply({ 
                 content: '연동되지 않은 solved.ac 계정입니다.'

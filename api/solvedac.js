@@ -99,6 +99,21 @@ module.exports = {
             return false;
         }
     },
+    async getProblemById(problemId) {
+        let paramsObj = { query: `id:${problemId}` };
+        console.log(paramsObj.query);
+        let searchParams = new URLSearchParams(paramsObj);
+        try {
+            const queryResult = await fetch(`https://solved.ac/api/v3/search/problem?${searchParams.toString()}`);
+            const { count, items } = await queryResult.json();
+            console.log({count, items});
+            if (count > 0) return items[0];
+            else return null;
+        } catch (e) {
+            console.error('Request Error!', e);
+            return null;
+        }
+    },
     async getRandomProblemsWithQuery(query) {
         try {
             let solved_filter = `lang:ko solvable:true solved:100.. ${query}`;

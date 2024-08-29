@@ -121,8 +121,8 @@ module.exports = {
         }
       
         const artificialRating = getArtificialRating(difficultyKind);
-        const newWinRating = calculateNewRating(userData.rating, newRating, 1);
-        const newLoseRating = calculateNewRating(userData.rating, newRating, 1);
+        const newWinRating = calculateNewRating(userData.rating, artificialRating, 1);
+        const newLoseRating = calculateNewRating(userData.rating, artificialRating, 0);
         setPlaying(interaction.user.id); // 시작!
 
         const message = await interaction.followUp({
@@ -224,7 +224,7 @@ module.exports = {
             // bs.problemSelected(interaction.channelId, problemDB[0].problemId);
 
             (async() => {
-                const originalMessage = `**@${userData.handle} 님의 연습이 시작되었습니다.**\n제한시간은 30분입니다. 문제 풀이를 풀지 않고 포기하시려면 아래 버튼을 사용해주세요. \n\n**선정된 문제**\n` +
+                const originalMessage = `**@${userData.handle} 님의 연습이 시작되었습니다.**\n제한시간은 30분입니다. 문제를 풀지 않고 포기하시려면 아래 버튼을 사용해주세요. \n\n**선정된 문제**\n` +
                 `https://boj.ma/${problemDB[0].problemId}/t`;
                 const response = await interaction.followUp({
                     content: originalMessage,
@@ -255,6 +255,7 @@ module.exports = {
                             endPlaying(interaction.user.id);
                             const successTime = Math.floor(Date.now() / 1000) - startTime;
                             addSuccessCount(interaction.user.id, difficultyKind);
+                            applyNewRating(currentID, newWinRating);
                             timeMessage.edit(`${Math.floor(successTime / 60)}분 ${successTime % 60}초 만에 문제풀이에 성공하셨습니다. 축하드립니다!\n프로필에 기록되었습니다.`);
                         } else if (remainTime > 0) {
                             setTimeout(myFunc, 60000);
@@ -288,22 +289,23 @@ module.exports = {
                                 const successTime = Math.floor(Date.now() / 1000) - startTime;
                                 addSuccessCount(interaction.user.id, difficultyKind);
                                 await confirmation.followUp({ content: `${Math.floor(successTime / 60)}분 ${successTime % 60}초 만에 문제풀이에 성공하셨습니다. 축하드립니다!\n프로필에 기록되었습니다.`, components: [] });
-                                applyNewRating(newWinRating);
+                                applyNewRating(currentID, newWinRating);
                                 return;
                             }
                         }
                         await confirmation.followUp({ content: `아무리 기다려도.. 문제 풀이가 확인되지 않습니다. 아쉽지만 성공기록은 추가되지 않습니다.\n@${userData.handle}님, 거짓말은 아니겠죠..?`, components: [] });
-                        applyNewRating(newLoseRating);
+                        applyNewRating(currentID, newLoseRating);
                     } else if (confirmation.customId === 'giveup') {
                         userEndFlag = true;
                         endPlaying(interaction.user.id);
-                        applyNewRating(newLoseRating);
+                        applyNewRating(currentID, newLoseRating);
                         await confirmation.update({ content: originalMessage, components: [] });
                         await confirmation.followUp({ content: `중도포기를 선택하셨습니다. 다음에는 좋은 문제를 만나실 거에요!`, components: [] });
                     }
                 } catch (e) {
                     userEndFlag = true;
                     endPlaying(interaction.user.id);
+                    console.error(e);
                     // await interaction.followUp({ content: originalMessage + `\n\n제한시간이 초과되어 실패하셨습니다.`, components: [] });
                 }
             })();

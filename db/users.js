@@ -74,6 +74,14 @@ module.exports = {
                 "d": {
                     "challenge": 0,
                     "success": 0
+                },
+                "r": {
+                    "challenge": 0,
+                    "success": 0
+                },
+                "u": {
+                    "challenge": 0,
+                    "success": 0
                 }
             }
         };
@@ -93,7 +101,8 @@ module.exports = {
         const dbPath = path.join(__dirname, 'data/users.json');
         try {
             let res = JSON.parse(fs.readFileSync(dbPath));
-            res[discordId].solved[difficulty].challenge += 1;
+            if (res[discordId].solved[difficulty]) res[discordId].solved[difficulty].challenge += 1;
+            else res[discordId].solved[difficulty] = { challenge: 1, success: 0 };
             fs.writeFileSync(dbPath, JSON.stringify(res, null, 2));
         } catch (e) {
             console.error('addChallengeCount fail', e);
@@ -103,7 +112,8 @@ module.exports = {
         const dbPath = path.join(__dirname, 'data/users.json');
         try {
             let res = JSON.parse(fs.readFileSync(dbPath));
-            res[discordId].solved[difficulty].success += 1;
+            if (res[discordId].solved[difficulty]) res[discordId].solved[difficulty].success += 1;
+            else res[discordId].solved[difficulty] = { challenge: 1, success: 1 };
             fs.writeFileSync(dbPath, JSON.stringify(res, null, 2));
         } catch (e) {
             console.error('addSuccessCount fail', e);

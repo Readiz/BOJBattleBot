@@ -9,10 +9,11 @@ module.exports = {
     // 레이팅을 0과 3000 사이로 제한
     newRating = Math.max(0, Math.min(3000, newRating));
     
-    return newRating;
+    return Math.floor(newRating);
   },
   getArtificialRating: function (difficulty) {
     const db = {
+        'u': 100,
         'b': 500,
         's': 1000,
         'g': 1500,
