@@ -50,6 +50,10 @@ module.exports = {
         const userObj = {
             handle: solvedId,
             rating: 1000,
+            "minigame": {
+                "win": 0,
+                "lose": 0
+            },
             "solved": {
                 "b": {
                     "challenge": 0,
@@ -123,6 +127,44 @@ module.exports = {
             fs.writeFileSync(dbPath, JSON.stringify(res, null, 2));
         } catch (e) {
             console.error('addSuccessCount fail', e);
+        }
+    },
+    addMiniGameWin(discordId) {
+        const dbPath = path.join(__dirname, 'data/users.json');
+        try {
+            let res = JSON.parse(fs.readFileSync(dbPath));
+            if (!res[discordId].minigame) {
+                res[discordId].minigame = { win: 0, lose: 0};
+            }
+            if (!res[discordId].minigame.win) res[discordId].minigame.win = 1;
+            else res[discordId].minigame.win += 1;
+            fs.writeFileSync(dbPath, JSON.stringify(res, null, 2));
+        } catch (e) {
+            console.error('addWinCnt fail', e);
+        }
+    },
+    addMiniGameLose(discordId) {
+        const dbPath = path.join(__dirname, 'data/users.json');
+        try {
+            let res = JSON.parse(fs.readFileSync(dbPath));
+            if (!res[discordId].minigame) {
+                res[discordId].minigame = { win: 0, lose: 0};
+            }
+            if (!res[discordId].minigame.lose) res[discordId].minigame.lose = 1;
+            else res[discordId].minigame.lose += 1;
+            fs.writeFileSync(dbPath, JSON.stringify(res, null, 2));
+        } catch (e) {
+            console.error('addLoseCnt fail', e);
+        }
+    },
+    applyNewRating(discordId, rating) {
+        const dbPath = path.join(__dirname, 'data/users.json');
+        try {
+            let res = JSON.parse(fs.readFileSync(dbPath));
+            res[discordId].rating = rating;
+            fs.writeFileSync(dbPath, JSON.stringify(res, null, 2));
+        } catch (e) {
+            console.error('addLoseCnt fail', e);
         }
     },
 }

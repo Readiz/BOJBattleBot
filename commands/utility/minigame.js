@@ -1,6 +1,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
-const { getUser, addChallengeCount, addSuccessCount, setPlaying, endPlaying } = require('../../db/users.js');
+const { getUser, addMiniGameWin, addMiniGameLose, applyNewRating } = require('../../db/users.js');
 const wait = require('node:timers/promises').setTimeout;
+const { calculateNewRating } = require('../../util/logic.js');
 const solvedacQueryHelper = require('../../api/solvedac.js');
 const bojQueryHelper = require('../../api/boj.js');
 const gptQueryHelper = require('../../api/gpt.js');
@@ -38,6 +39,7 @@ const row = new ActionRowBuilder()
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('미니게임')
@@ -100,57 +102,64 @@ module.exports = {
             components: [row]
         });
         let ansList = [];
+        let ansListDiscordId = [];
         let notAnsList = [];
-        let answeredList = [];
-      //   (async() => {
-      //     const userName = interaction.user.username;
-      //     try {
-      //         const confirmation = await response.awaitMessageComponent({ time: 60_000 * 3 });
-      //         if (answeredList.includes(userName)) {
-      //           await confirmation.reply({ content: '이미 응답하셨습니다.', ephemeral: true });  
-      //           return;
-      //         }
-      //         if (confirmation.customId === ans_case) {
-      //           ansList.push(userName);
-      //         } else {
-      //           notAnsList.push(userName);
-      //         }
-      //         await confirmation.reply({ content: '응답 되었습니다! 잠시 뒤 정답이 공개됩니다.', ephemeral: true });
-      //     } catch (e) {
-      //       console.error(e);
-      //     }
-      //     answeredList.push(userName);
-      // })();
-      // 이벤트 리스너를 통해 여러 사용자의 응답 처리
-      const collector = response.createMessageComponentCollector({ time: 60_000 * 3 });
+        let notAnsListDiscordId = [];
+        let answeredListDiscordId = [];
+        const collector = response.createMessageComponentCollector({ time: 60_000 * 3 });
 
-      collector.on('collect', async (confirmation) => {
-          const userName = confirmation.user.username;
+        collector.on('collect', async (confirmation) => {
+            const userName = confirmation.user.username;
+            const userId = confirmation.user.id;
 
-          if (answeredList.includes(userName)) {
-              await confirmation.reply({ content: '이미 응답하셨습니다.', ephemeral: true });
-              return;
+            if (answeredListDiscordId.includes(userId)) {
+                await confirmation.reply({ content: '이미 응답하셨습니다.', ephemeral: true });
+                return;
+            }
+
+            if (confirmation.customId === ans_case) {
+                ansList.push(userName);
+                ansListDiscordId.push(userId);
+            } else {
+                notAnsList.push(userName);
+                notAnsListDiscordId.push(userId);
+            }
+
+            answeredListDiscordId.push(userId);
+            await confirmation.reply({ content: '응답 되었습니다! 잠시 뒤 정답이 공개됩니다.', ephemeral: true });
+        });
+
+        collector.on('end', (collected) => {
+            console.log('응답 수집 종료:', collected.size);
+            // 여기에 응답 수집 종료 후 처리 로직을 추가하세요.
+        });
+        await delay(1000 * 60 * 3);
+
+        let regiUsers = [];
+        for (const id of ansListDiscordId) {
+          const userData = getUser(id);
+          if (!userData) {
+              continue;
           }
-
-          if (confirmation.customId === ans_case) {
-              ansList.push(userName);
-          } else {
-              notAnsList.push(userName);
+          addMiniGameWin(id);
+          const newRating = calculateNewRating(userData.rating, 1000, 1);
+          applyNewRating(id, newRating);
+          regiUsers.push(userData.handle);
+        }
+        for (const id of notAnsListDiscordId) {
+          const userData = getUser(id);
+          if (!userData) {
+              continue;
           }
+          addMiniGameLose(id);
+          const newRating = calculateNewRating(userData.rating, 1000, 0);
+          applyNewRating(id, newRating);
+          regiUsers.push(userData.handle);
+        }
 
-          answeredList.push(userName);
-          await confirmation.reply({ content: '응답 되었습니다! 잠시 뒤 정답이 공개됩니다.', ephemeral: true });
-      });
-
-      collector.on('end', (collected) => {
-          console.log('응답 수집 종료:', collected.size);
-          // 여기에 응답 수집 종료 후 처리 로직을 추가하세요.
-      });
-      await delay(1000 * 60 * 3);
-
-      const resultString = `**정답: ${convertToNL[ans_case]}**\n\n실제 백준 문제 번호: ${problemId}\nhttps://boj.ma/${problemId}/t\n\n정답자: ${[...new Set(ansList)].join(', ')}\n오답자: ${[...new Set(notAnsList)].join(', ')}\n`
-      await interaction.followUp({
-        content: resultString
-      });
+        const resultString = `**정답: ${convertToNL[ans_case]}**\n\n실제 백준 문제 번호: ${problemId}\nhttps://boj.ma/${problemId}/t\n\n정답자: ${[...new Set(ansList)].join(', ')}\n오답자: ${[...new Set(notAnsList)].join(', ')}\n\n미니게임 전적 반영된 핸들: ${[...new Set(regiUsers)].join(', ')}\n**Help: 미니게임의 전적을 반영하시려면, 먼저 /연동 커맨드로 solved.ac 계정을 연동해주세요.**`
+        await interaction.followUp({
+          content: resultString
+        });
     }
 };
