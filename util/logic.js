@@ -1,5 +1,5 @@
 module.exports = {
-   calculateNewRating: function (currentRating, opponentRating, actualScore, kFactor = 32) {
+   calculateNewRating: function (currentRating, opponentRating, actualScore, kFactor = 256) {
     // 예상 승리 확률 계산
     const expectedScore = 1 / (1 + Math.pow(10, (opponentRating - currentRating) / 400));
     
