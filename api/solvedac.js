@@ -116,7 +116,7 @@ module.exports = {
     },
     async getRandomProblemsWithQuery(query) {
         try {
-            let solved_filter = `solvable:true solved:100.. ${query}`;
+            let solved_filter = `solvable:true solved:10.. ${query}`;
             console.log(solved_filter);
             let paramsObj = { 
                 query: `${solved_filter}`,
