@@ -61,13 +61,13 @@ module.exports = {
           result = await solvedacQueryHelper.getRandomProblemsWithQuery('-tag:dp -tag:greedy');
           ans_case = 'none';
         } else if (tag_case == 1) {
-          result = await solvedacQueryHelper.getRandomProblemsWithQuery('+tag:dp -tag:greedy');
+          result = await solvedacQueryHelper.getRandomProblemsWithQuery('tag:dp -tag:greedy');
           ans_case = 'dp';
         } else if (tag_case == 2) {
-          result = await solvedacQueryHelper.getRandomProblemsWithQuery('-tag:dp +tag:greedy');
+          result = await solvedacQueryHelper.getRandomProblemsWithQuery('-tag:dp tag:greedy');
           ans_case = 'greedy';
         } else {
-          result = await solvedacQueryHelper.getRandomProblemsWithQuery('+tag:dp +tag:greedy');
+          result = await solvedacQueryHelper.getRandomProblemsWithQuery('tag:dp tag:greedy');
           ans_case = 'dp_greedy';
         }
         if (!result || result.length == 0) {
