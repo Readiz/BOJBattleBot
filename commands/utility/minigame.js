@@ -61,13 +61,13 @@ module.exports = {
           result = await solvedacQueryHelper.getRandomProblemsWithQuery('-tag:dp -tag:greedy');
           ans_case = 'none';
         } else if (tag_case == 1) {
-          result = await solvedacQueryHelper.getRandomProblemsWithQuery('tag:dp -tag:greedy');
+          result = await solvedacQueryHelper.getRandomProblemsWithQuery('+tag:dp -tag:greedy');
           ans_case = 'dp';
         } else if (tag_case == 2) {
-          result = await solvedacQueryHelper.getRandomProblemsWithQuery('-tag:dp tag:greedy');
+          result = await solvedacQueryHelper.getRandomProblemsWithQuery('-tag:dp +tag:greedy');
           ans_case = 'greedy';
         } else {
-          result = await solvedacQueryHelper.getRandomProblemsWithQuery('tag:dp tag:greedy');
+          result = await solvedacQueryHelper.getRandomProblemsWithQuery('+tag:dp +tag:greedy');
           ans_case = 'dp_greedy';
         }
         if (!result || result.length == 0) {
@@ -93,7 +93,7 @@ module.exports = {
         const simpleDesc = desc[1].trim().replace(/\n\n/g, '\n');
         console.log(simpleDesc);
 
-        const refinedSimpleDesc = await gptQueryHelper.completions(simpleDesc, 'You are a helpful assistant. 너는 주어지는 문제 설명을 최대한 가독성 있게 바꿔주는 역할을 할거야. 응답은 **문제설명**으로 시작하도록 해. 주어진 입력에 없는 추가적인 설명이나 힌트, 해결법을 덧붙이지마. Mathjax는 사용할 수 없는 환경이야. 수식을 최대한 간단하게 표현하고 markdown 문법과 충돌되지 않게 해. 용어가 헷갈리는게 있으면 Computer Science 기준으로 답변해줘. 혹시 중간에 링크가 있으면, 마지막에 몰아서 링크만 심플하게 리스트로 제공해. 없으면 추가하지마.');
+        const refinedSimpleDesc = await gptQueryHelper.completions(simpleDesc, 'You are a helpful assistant. 너는 주어지는 문제 설명을 한국어로 최대한 가독성 있게 바꿔주는 역할을 할거야. 응답은 **문제설명**으로 시작하도록 해. 주어진 입력에 없는 추가적인 설명이나 힌트, 해결법을 덧붙이지마. Mathjax는 사용할 수 없는 환경이야. ($로 시작하고 $로 끝나는 형식을 사용할 수 없는 환경이란 뜻) 그러므로 수식을 최대한 간단하게 표현하고 markdown 문법과 충돌되지 않게 해. 용어가 헷갈리는게 있으면 Computer Science 기준으로 답변해줘. 혹시 설명에 ![](https://upload.acmicpc.net/~~)와 같은 괄호로 둘러싼 url 링크가 있으면, 마지막에 몰아서 url 링크를 심플하게 리스트로 제공해. 없으면 추가하지마.');
 
         const originalMessage = `**미니게임이 시작되었습니다.**\n정답은 3분 뒤에 공개합니다. 아래 설명을 보고 적절한 태그를 고르세요. \n\n` +
         `${refinedSimpleDesc}`;
@@ -142,7 +142,7 @@ module.exports = {
               continue;
           }
           addMiniGameWin(id);
-          const newRating = calculateNewRating(userData.rating, 1000, 1);
+          const newRating = calculateNewRating(userData.rating, 1500, 1);
           applyNewRating(id, newRating);
           regiUsers.push(userData.handle);
         }
@@ -152,12 +152,12 @@ module.exports = {
               continue;
           }
           addMiniGameLose(id);
-          const newRating = calculateNewRating(userData.rating, 1000, 0);
+          const newRating = calculateNewRating(userData.rating, 1500, 0);
           applyNewRating(id, newRating);
           regiUsers.push(userData.handle);
         }
 
-        const resultString = `**정답: ${convertToNL[ans_case]}**\n\n실제 백준 문제 번호: ${problemId}\nhttps://boj.ma/${problemId}/t\n\n정답자: ${[...new Set(ansList)].join(', ')}\n오답자: ${[...new Set(notAnsList)].join(', ')}\n\n미니게임 전적 반영된 핸들: ${[...new Set(regiUsers)].join(', ')}\n**Help: 미니게임의 전적을 반영하시려면, 먼저 /연동 커맨드로 solved.ac 계정을 연동해주세요.**`
+        const resultString = `**정답: ${convertToNL[ans_case]}**\n\n실제 백준 문제 번호: ${problemId}\nhttps://boj.ma/${problemId}/t\n\n정답자: ${ansListDiscordId.map(_=>`<@${_}>`).join(', ')}\n오답자: ${notAnsListDiscordId.map(_=>`<@${_}>`).join(', ')}\n\n미니게임 전적 반영된 핸들: ${[...new Set(regiUsers)].join(', ')}\n**Help: 미니게임의 전적을 반영하시려면, 먼저 /연동 커맨드로 solved.ac 계정을 연동해주세요.**`
         await interaction.followUp({
           content: resultString
         });

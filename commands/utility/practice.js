@@ -50,6 +50,7 @@ module.exports = {
         const difficulty = interaction.options.getString('difficulty');
         const difficultyKind = difficulty[0];
         const userData = getUser(interaction.user.id);
+        const userDiscordId = interaction.user.id;
         if (!userData) {
             await interaction.editReply({ 
                 content: 'solved.ac 계정이 연동되어 있지 않습니다. /연동 명령어로 연동 후 사용해주세요.'
@@ -119,11 +120,8 @@ module.exports = {
           tagStringResult += `  ||${item.battleTagDescription}${padding}||\n`;
           ++idx;
         }
-      
-        const artificialRating = getArtificialRating(difficultyKind);
-        const newWinRating = calculateNewRating(userData.rating, artificialRating, 1);
-        const newLoseRating = calculateNewRating(userData.rating, artificialRating, 0);
-        setPlaying(interaction.user.id); // 시작!
+
+        setPlaying(userDiscordId); // 시작!
 
         const message = await interaction.followUp({
             content: `10초 이내에 밴할 문제 번호를 이모지로 반응해주세요. 선택하지 않으면 ${PROBLEM_NUM}문제중 랜덤이 됩니다.\n\n` + tagStringResult,
@@ -139,7 +137,7 @@ module.exports = {
           return ['1️⃣', '2️⃣', '3️⃣'].includes(reaction.emoji.name);// && user.id === interaction.user.id;
         };
 
-        const userids = [interaction.user.id];
+        const userids = [userDiscordId];
         
         message.awaitReactions({ filter: collectorFilter, max: 100, time: 10_000 })
         .then(collected => {
@@ -222,15 +220,19 @@ module.exports = {
             problemDB.sort(((a,b) => a.banCnt - b.banCnt ));
 
             // bs.problemSelected(interaction.channelId, problemDB[0].problemId);
+            const artificialRating = (problemDB[0].level + 4) * 100; // 브론즈5: 500 / 실버5: 1000 / ...
+            const newWinRating = calculateNewRating(userData.rating, artificialRating, 1);
+            const newLoseRating = calculateNewRating(userData.rating, artificialRating, 0);
+            applyNewRating(userDiscordId, newLoseRating);
 
             (async() => {
-                const originalMessage = `**@${userData.handle} 님의 연습이 시작되었습니다.**\n제한시간은 30분입니다. 문제를 풀지 않고 포기하시려면 아래 버튼을 사용해주세요. \n\n**선정된 문제**\n` +
+                const originalMessage = `**<@${userDiscordId}>님의 연습이 시작되었습니다.**\n제한시간은 30분입니다. 문제를 풀지 않고 포기하시려면 아래 버튼을 사용해주세요. \n\n**선정된 문제**\n` +
                 `https://boj.ma/${problemDB[0].problemId}/t`;
                 const response = await interaction.followUp({
                     content: originalMessage,
                     components: [row]
                 });
-                addChallengeCount(interaction.user.id, difficultyKind);
+                addChallengeCount(userDiscordId, difficultyKind);
 
                 let userEndFlag = false;
                 let timeEndFlag = false;
@@ -252,24 +254,23 @@ module.exports = {
                         const ret = await solvedacQueryHelper.checkUserSolvedReal(userData.handle, problemDB[0].problemId);
                         if (ret == true) {
                             userEndFlag = true;
-                            endPlaying(interaction.user.id);
+                            endPlaying(userDiscordId);
                             const successTime = Math.floor(Date.now() / 1000) - startTime;
-                            addSuccessCount(interaction.user.id, difficultyKind);
-                            applyNewRating(currentID, newWinRating);
-                            timeMessage.edit(`${Math.floor(successTime / 60)}분 ${successTime % 60}초 만에 문제풀이에 성공하셨습니다. 축하드립니다!\n프로필에 기록되었습니다.`);
+                            addSuccessCount(userDiscordId, difficultyKind);
+                            applyNewRating(userDiscordId, newWinRating);
+                            timeMessage.edit(`<@${userDiscordId}>님, ${Math.floor(successTime / 60)}분 ${successTime % 60}초 만에 문제풀이에 성공하셨습니다. 축하드립니다!\n프로필에 기록되었습니다.`);
                         } else if (remainTime > 0) {
                             setTimeout(myFunc, 60000);
                         } else {
                             timeEndFlag = true;
-                            applyNewRating(newLoseRating);
-                            timeMessage.edit(`제한 시간이 종료되었습니다. 아쉽네요..`);
+                            timeMessage.edit(`<@${userDiscordId}>님, 제한 시간이 종료되었습니다. 아쉽네요..`);
+                            endPlaying(userDiscordId);
                         }
                     };
                     myFunc();
                 })();
 
-                const currentID = interaction.user.id;
-                const collectorFilter = i => i.user.id === currentID;
+                const collectorFilter = i => i.user.id === userDiscordId;
 
                 try {
                     const confirmation = await response.awaitMessageComponent({ filter: collectorFilter, time: 60_000 * 30 });
@@ -279,7 +280,7 @@ module.exports = {
                     }
                     if (confirmation.customId === 'success') {
                         userEndFlag = true;
-                        endPlaying(interaction.user.id);
+                        endPlaying(userDiscordId);
                         await confirmation.update({ content: originalMessage + `\n\n정말로 풀었는지 확인을 진행 중입니다...`, components: [] });
 
                         for(let i = 0; i < 5; ++i) {
@@ -287,24 +288,22 @@ module.exports = {
                             const ret = await solvedacQueryHelper.checkUserSolvedReal(userData.handle, problemDB[0].problemId);
                             if (ret == true) {
                                 const successTime = Math.floor(Date.now() / 1000) - startTime;
-                                addSuccessCount(interaction.user.id, difficultyKind);
-                                await confirmation.followUp({ content: `${Math.floor(successTime / 60)}분 ${successTime % 60}초 만에 문제풀이에 성공하셨습니다. 축하드립니다!\n프로필에 기록되었습니다.`, components: [] });
-                                applyNewRating(currentID, newWinRating);
+                                addSuccessCount(userDiscordId, difficultyKind);
+                                await confirmation.followUp({ content: `<@${userDiscordId}>님, ${Math.floor(successTime / 60)}분 ${successTime % 60}초 만에 문제풀이에 성공하셨습니다. 축하드립니다!\n프로필에 기록되었습니다.`, components: [] });
+                                applyNewRating(userDiscordId, newWinRating);
                                 return;
                             }
                         }
-                        await confirmation.followUp({ content: `아무리 기다려도.. 문제 풀이가 확인되지 않습니다. 아쉽지만 성공기록은 추가되지 않습니다.\n@${userData.handle}님, 거짓말은 아니겠죠..?`, components: [] });
-                        applyNewRating(currentID, newLoseRating);
+                        await confirmation.followUp({ content: `<@${userDiscordId}>님, 아무리 기다려도.. 문제 풀이가 확인되지 않습니다. 아쉽지만 성공기록은 추가되지 않습니다.\n@${userData.handle}님, 거짓말은 아니겠죠..?`, components: [] });
                     } else if (confirmation.customId === 'giveup') {
                         userEndFlag = true;
-                        endPlaying(interaction.user.id);
-                        applyNewRating(currentID, newLoseRating);
+                        endPlaying(userDiscordId);
                         await confirmation.update({ content: originalMessage, components: [] });
-                        await confirmation.followUp({ content: `중도포기를 선택하셨습니다. 다음에는 좋은 문제를 만나실 거에요!`, components: [] });
+                        await confirmation.followUp({ content: `<@${userDiscordId}>님, 중도포기를 선택하셨습니다. 다음에는 좋은 문제를 만나실 거에요!`, components: [] });
                     }
                 } catch (e) {
                     userEndFlag = true;
-                    endPlaying(interaction.user.id);
+                    endPlaying(userDiscordId);
                     console.error(e);
                     // await interaction.followUp({ content: originalMessage + `\n\n제한시간이 초과되어 실패하셨습니다.`, components: [] });
                 }
